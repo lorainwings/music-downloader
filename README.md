@@ -6,6 +6,10 @@ This project was used for downloading your favorite music.
 
 In the project directory, you can run:
 
+### `npm install`
+
+The command will install project all dependencies;
+
 ### `npm run sdownload`
 
 The command will guide you to download single music;
