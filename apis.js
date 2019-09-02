@@ -85,7 +85,9 @@ const downladAudio = async (singer) => {
     response.data.pipe(writer)
     return new Promise((resolve, reject) => {
         writer.on("finish", resolve);
-        writer.on("error", reject);
+        writer.on("error", () => {
+            reject(downloadUrl)
+        });
     });
 }
 
