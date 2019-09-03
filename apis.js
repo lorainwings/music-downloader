@@ -61,7 +61,7 @@ const analyUrl = (list) => {
 
 // 查询音频格式
 const parseAudioFormat = async (mid) => {
-    const originUrl = `http://antiserver.kuwo.cn/anti.s?response=url&rid=MUSIC_${mid}&format=aac|mp3&type=convert_url`;
+    const originUrl = `http://antiserver.kuwo.cn/anti.s?response=url&rid=MUSIC_${mid}&format=mp3|aac&type=convert_url`;
     const { data } = await axiosInstance(originUrl);
     const index = data.lastIndexOf('.');
     const format = index === -1 ? 'aac' : data.slice(index + 1);
