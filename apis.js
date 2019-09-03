@@ -34,7 +34,7 @@ const searchMusic = (name, artist = '') => {
         res = res.data;
         try {
             if (Array.isArray(res.abslist) && artist) {
-                idx = res.abslist.findIndex(item => item.ARTIST === artist);
+                idx = res.abslist.findIndex(item => item.ARTIST.indexOf(artist) !== -1);
             } else {
                 idx = 1;
             }
