@@ -2,8 +2,12 @@ require('colors');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const fuzzy = require('fuzzy');
+const inquirer = require('inquirer');
 const readline = require('readline');
 const ProgressBar = require('progress');
+const autocomplete = require('inquirer-autocomplete-prompt');
+inquirer.registerPrompt('autocomplete', autocomplete);
 
 let bar;
 
@@ -14,6 +18,28 @@ const axiosInstance = (url, opts) => {
         ...opts
     })
 }
+
+// 列表选择
+const selectMusic = async options => {
+    const target = await inquirer.prompt([
+        {
+            type: 'autocomplete',
+            name: 'name',
+            pageSize: 40,
+            message: '请选择下载哪一项(可上下选择或者输入关键词)?',
+            source(ans, input = '') {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        const fuzzyResult = fuzzy.filter(input, options);
+                        resolve(fuzzyResult.map(el => el.original));
+                    }, 100);
+                });
+            }
+        }
+    ]);
+    return { key: target.name };
+};
+
 
 // songListId 歌单id
 const getSongList = async (songListId) => {
@@ -27,23 +53,43 @@ const getSongList = async (songListId) => {
 }
 
 // 歌曲搜索
-const searchMusic = (name, artist = '') => {
+const searchMusic = async (name, artist = '') => {
+    let idx, mid;
     const url = encodeURI(`http://search.kuwo.cn/r.s?client=kt&all=${name}&pn=0&rn=200&uid=221260053&ver=kwplayer_ar_99.99.99.99&vipver=1&ft=music&cluster=0&strategy=2012&encoding=utf8&rformat=json&vermerge=1&mobi=1`);
-    return axiosInstance(url).then((res) => {
-        let idx, mid;
-        res = res.data;
-        try {
-            if (Array.isArray(res.abslist) && artist) {
-                idx = res.abslist.findIndex(item => item.ARTIST.indexOf(artist) !== -1);
-            } else {
-                idx = 1;
-            }
-            mid = res.abslist[idx === -1 ? 1 : idx].MUSICRID.split('_')[1];
-            return { name, mid, artist }
-        } catch (e) {
-            return { name, mid: -2000, artist } // -2000 未读到相应的值
+    const res = await axiosInstance(url);
+    const { abslist } = res.data;
+    try {
+        if (Array.isArray(abslist) && artist) {
+            idx = abslist.findIndex(item => item.ARTIST.indexOf(artist) !== -1);
+        } else {
+            idx = 1;
         }
-    })
+        mid = abslist[idx === -1 ? 1 : idx].MUSICRID.split('_')[1];
+        return { name, mid, artist }
+    } catch (e) {
+        return { name, mid: -2000, artist } // -2000 未读到相应的值
+    }
+}
+
+// 歌曲搜索(带列表选择)
+const searchMusicByChoose = async (name, artist) => {
+    const url = encodeURI(`http://www.kuwo.cn/api/www/search/searchMusicBykeyWord?key=${name}&pn=1&rn=200&reqId=47c24e10-cfb4-11e9-b8c2-754f2a15596d`);
+    let rid;
+    const res = await axiosInstance(url);
+    const { list } = res.data.data;
+    try {
+        if (Array.isArray(list) && artist) {
+            const idx = list.findIndex(item => item.artist.indexOf(artist) !== -1);
+            ({ rid } = list[idx === -1 ? 1 : idx]);
+        } else {
+            const opts = list.map(({ name, artist }, idx) => `${idx}. ${name} —————————————————————————————— ${artist}`);
+            const { key } = await selectMusic(opts);
+            ({ rid, artist } = list[key.split(/\.\s+/)[0]]);
+        }
+        return { name, mid: rid, artist };
+    } catch (e) {
+        return { name, mid: -2000, artist }; // -2000 未读到相应的值
+    }
 }
 
 
@@ -123,8 +169,8 @@ const multiDownload = async (list) => {
 // 单曲下载
 const singleDownload = async (...args) => {
     try {
-        console.log("搜索音乐:" + args);
-        const musicInfo = await searchMusic(...args);
+        console.log(`搜索音乐: ${args.join(" ")}`);
+        const musicInfo = await searchMusicByChoose(...args);
         bar = new ProgressBar(`下载进度: [:bar :current/:total](:rate/bps :percent :etas)`, { total: 1, width: 100, complete: '█' });
         console.log("音乐已经找到! 🐥🐥🐥");
         await downladAudio(musicInfo);
@@ -153,14 +199,18 @@ const readSyncByRl = tips => {
     });
 };
 
-
-const collectInput = async (prompt, name) =>
+// notEmpty=1 必须输入值 
+// notEmpty=0 非必须输入
+const collectInput = async (prompt, name, notEmpty = 1) =>
     readSyncByRl(prompt).then(async input => {
-        if (input === '') {
+        if (notEmpty === 1 && input === '') {
             collectInput(`❌   ${name}为空,请重新输入： ❌\n`.red.bold, name);
             process.exit();
+        } else if (notEmpty === 0 && input === '') {
+            console.log(`⚠️   你输入的${name}为:   默认值(空)    ⚠️`.yellow.bold);
+        } else {
+            console.log(`✅   你输入的${name}为:   ${input}   ✅`.green.bold);
         }
-        console.log(`✅   你输入的${name}为:   ${input}   ✅`.green.bold);
         return input;
     });
 
@@ -171,5 +221,6 @@ module.exports = {
     getSongList, // 歌单搜索
     multiDownload, // 歌单下载
     searchMusic, // 单曲搜索
+    searchMusicByChoose, // 单曲搜索带列表选取
     singleDownload // 单曲下载
 }

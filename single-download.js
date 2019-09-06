@@ -7,8 +7,9 @@ const taskOpen = async () => {
         '歌曲名'
     );
     const singer = await collectInput(
-        '请输入该曲的歌手名：',
-        '歌手名'
+        '请输入该曲的歌手名(可缺省)：',
+        '歌手名',
+        0
     );
     singleDownload(name, singer);
 }
