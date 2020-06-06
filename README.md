@@ -10,11 +10,11 @@ In the project directory, you can run:
 
 The command will install project all dependencies;
 
-### `npm run sdownload`
+### `npm run sd`
 
 The command will guide you to download single music;
 
-### `npm run mdownload`
+### `npm run md`
 
 The command will guide you to download the song list of QQ music;
 You only need to enter the sharing link of the song list of QQ music.
