@@ -9,8 +9,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "sdownload": "node single-download.js",
-    "mdownload": "node multiple-download.js"
+    "sd": "node single-download.js",
+    "md": "node multiple-download.js"
   },
   "keywords": [],
   "author": "",
